@@ -48,8 +48,10 @@ def key_derive(key):
 def power(a, b, p):
     return pow(a, b, p)
 
-def main():
 
+# Attack 1:
+# Mallory replaces Alice's and Bob's public values with q.
+def public_key_attack():
     print(f"The value of q: {q}")
     print(f"The value of α: {alpha}")
 
@@ -139,6 +141,99 @@ def main():
     print("\n--- Mal forges a message to Bob ---")
     print(f"Bob reads: {decrypt(k_bob, forged)}")
     print("\nAlice and Bob noticed nothing wrong.")
+
+
+# Attack 2:
+# Mallory replaces the generator alpha with 1, q, or q - 1.
+def generator_attack(malicious_alpha, alpha_name):
+
+    print(f"\n--- Generator Attack: α = {alpha_name} ---")
+
+    # Alice's private and public keys
+    XA = 6
+    YA = power(malicious_alpha, XA, q)
+    print(f"Alice's private key XA: {XA}")
+    print(f"Alice's public key YA: {YA}")
+
+    # Bob's private and public keys
+    XB = 15
+    YB = power(malicious_alpha, XB, q)
+    print(f"Bob's private key XB: {XB}")
+    print(f"Bob's public key YB: {YB}")
+
+    # Alice and Bob calculate the shared secret using
+    # Mallory's manipulated generator.
+    K_Alice = power(YB, XA, q)
+    K_Bob = power(YA, XB, q)
+
+    print(f"Shared secret key calculated by Alice: {K_Alice}")
+    print(f"Shared secret key calculated by Bob: {K_Bob}")
+
+    if K_Alice != K_Bob:
+        print("Key exchange failed: shared secrets don't match")
+        return
+
+    print("The shared secrets match")
+
+    # Mallory can determine the shared secret without
+    # knowing Alice's or Bob's private keys.
+    if malicious_alpha == 1:
+        K_Mal = 1
+
+    elif malicious_alpha == q:
+        K_Mal = 0
+
+    else:  # malicious_alpha == q - 1
+
+        # If both public keys are q - 1, both private
+        # exponents were odd, so the secret is q - 1.
+        if YA == q - 1 and YB == q - 1:
+            K_Mal = q - 1
+        else:
+            K_Mal = 1
+
+    print(f"Shared secret known by Mal: {K_Mal}")
+    print(f"Mal guessed it correctly: {K_Mal == K_Alice}")
+
+    # Alice, Bob, and Mallory derive AES keys.
+    k_alice = key_derive(K_Alice)
+    k_bob = key_derive(K_Bob)
+    k_mal = key_derive(K_Mal)
+
+    print(f"\nAlice's AES key: {k_alice.hex()}")
+    print(f"Bob's AES key:   {k_bob.hex()}")
+    print(f"Mal's AES key:   {k_mal.hex()}")
+    print(f"Keys match: {k_alice == k_bob == k_mal}")
+
+    # Alice encrypts a message and Bob decrypts it.
+    msg_a = "yo this working? (key worked)"
+    ct_a = encrypt(k_alice, msg_a)
+
+    print("\n--- Alice -> Bob ---")
+    print(f"Ciphertext c0: {ct_a.hex()}")
+    print(f"Bob reads:     {decrypt(k_bob, ct_a)}")
+    print(f"Mal reads:     {decrypt(k_mal, ct_a)}")
+
+    # Bob replies and Alice decrypts it.
+    msg_b = "it works (key worked)"
+    ct_b = encrypt(k_bob, msg_b)
+
+    print("\n--- Bob -> Alice ---")
+    print(f"Ciphertext c1: {ct_b.hex()}")
+    print(f"Alice reads:   {decrypt(k_alice, ct_b)}")
+    print(f"Mal reads:     {decrypt(k_mal, ct_b)}")
+
+
+def main():
+
+    print(f"The value of q: {q}")
+    print(f"The legitimate value of alpha: {alpha}")
+
+    public_key_attack()
+
+    generator_attack(1, "1")
+    generator_attack(q, "q")
+    generator_attack(q - 1, "q - 1")
 
 
 if __name__ == "__main__":
