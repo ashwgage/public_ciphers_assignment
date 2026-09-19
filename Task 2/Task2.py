@@ -27,8 +27,17 @@ q = parse(q_hex)
 alpha = parse(alpha_hex)
 
 #iv key gen
-key_iv = bytes(range(16))
+block_size = 16 #aes block size
+key_size = 16 #aes key size
 
+def gen_key():
+    return get_random_bytes(key_size)
+
+
+def gen_iv():
+    return get_random_bytes(block_size)
+
+key_iv = gen_iv()
 
 def encrypt(key, plaintext):
     cipher = AES.new(key, AES.MODE_CBC, key_iv)
@@ -38,6 +47,7 @@ def encrypt(key, plaintext):
 def decrypt(key, ciphertext):
     cipher = AES.new(key, AES.MODE_CBC, key_iv)
     return unpad(cipher.decrypt(ciphertext), AES.block_size).decode()
+
 
 def key_derive(key):
     key_bytes = str(key).encode() # turns key into a str and encodes it 5 -> "5" and encodes it
